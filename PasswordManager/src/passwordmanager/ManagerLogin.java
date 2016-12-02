@@ -153,9 +153,27 @@ public class ManagerLogin extends javax.swing.JFrame {
             return;
         }
 
+        //user name and password valid
+        //check one time password
+        if (!this.CheckLoginPasswordFromEmail()) {
+            return;
+        }
+
+        this.frameManager.userAccount = this.userAccount;
         ManagerMain mainPage = new ManagerMain(this.frameManager);
         this.frameManager.NextPage(mainPage);
     }//GEN-LAST:event_btnLoginActionPerformed
+
+    protected boolean CheckLoginPasswordFromEmail() {
+        String password = JOptionPane.showInputDialog("Please enter one time password sent to your email.");
+
+        if (password.equals("1234")) {
+            return true;
+        }
+
+        JOptionPane.showMessageDialog(this, "Invalid one time password.", "Invalid Login", 0);
+        return false;
+    }
 
     protected boolean CheckLoginAccountValid() {
         if (this.txtUserName.getText().equals("")) {
@@ -180,10 +198,10 @@ public class ManagerLogin extends javax.swing.JFrame {
         }
 
         boolean validLogin = true;
-        this.userAccount = new UserAccount(userName, password);
+        this.userAccount = new UserAccount(userName, password, "");
         this.recordManager = new RecordManager(this.userAccount);
         //check record exists and return Account object
-        EncryptFile tempUserAccount = this.recordManager.GetRecordInFile(this.userAccount);
+        UserAccount tempUserAccount = (UserAccount) this.recordManager.GetRecordInFile(this.userAccount);
         if (tempUserAccount == null) {
             //record not exisis
             JOptionPane.showMessageDialog(this, "Account does not exists.", "Invalid Login", 0);
@@ -195,12 +213,13 @@ public class ManagerLogin extends javax.swing.JFrame {
             //hash object
             this.recordManager.ConvertToDecryptedObject(this.userAccount);
             //check record in file and current login acount password valid
-            if (!this.recordManager.CheckRecordEquals(tempUserAccount)) {
+            if (!this.userAccount.GetPassword().equals(tempUserAccount.GetPassword())) {
                 JOptionPane.showMessageDialog(this, "Invalid password.", "Invalid Login", 0);
                 validLogin = false;
             }
         }
 
+        //count error login
         if (!validLogin) {
             int count = 1;
             if (!this.invalidAccountCount.containsKey(userName)) {
@@ -212,6 +231,9 @@ public class ManagerLogin extends javax.swing.JFrame {
 
             return false;
         }
+
+        //set back gmail
+        this.userAccount.gmailAccount = tempUserAccount.gmailAccount;
         return true;
     }
 
@@ -219,6 +241,9 @@ public class ManagerLogin extends javax.swing.JFrame {
     private void formComponentShown(java.awt.event.ComponentEvent evt) {//GEN-FIRST:event_formComponentShown
         //when show window
         this.invalidAccountCount.clear();
+        this.userAccount = null;
+        this.txtUserName.setText("");
+        this.txtPassword.setText("");
         this.txtUserName.requestFocus();
     }//GEN-LAST:event_formComponentShown
 

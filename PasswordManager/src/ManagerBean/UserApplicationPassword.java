@@ -12,12 +12,20 @@ import java.util.Map;
  *
  * @author Jonathan
  */
-public class UserApplicationPassword implements EncryptFile {
+public class UserApplicationPassword implements EncryptFile, Cloneable {
 
     public String applicationName;
     public String url;
     public String accountName;
-    public String password;
+    private String password;
+
+    public String GetPasswrod() {
+        return this.password;
+    }
+
+    public void SetPassword(String password) {
+        this.password = password;
+    }
 
     public Map<String, EncryptType> GetFieldsEncryptTypeList() {
         HashMap<String, EncryptType> fieldsEncryptType = new HashMap<String, EncryptType>();
@@ -30,7 +38,7 @@ public class UserApplicationPassword implements EncryptFile {
         return "data/AccountManager";
     }
 
-    public boolean IsRecordKeyExists(String[] curRecord) {
+    public boolean IsRecordKeyEquals(Object[] curRecord) {
         if (curRecord[0].equals(this.applicationName)
                 && curRecord[1].equals(this.url)
                 && curRecord[2].equals(this.accountName)) {

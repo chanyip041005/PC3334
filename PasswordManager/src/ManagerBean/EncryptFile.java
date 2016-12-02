@@ -24,7 +24,7 @@ public interface EncryptFile {
 
     public String GetFilePath();
 
-    public boolean IsRecordKeyExists(String[] curRecord);
+    public boolean IsRecordKeyEquals(Object[] curRecord);
 
     public Object CloneObject() throws CloneNotSupportedException;
 }

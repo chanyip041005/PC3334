@@ -7,20 +7,30 @@ package passwordmanager;
 
 import ManagerBean.EncryptFile;
 import ManagerBean.UserApplicationPassword;
+import java.awt.Point;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Stack;
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import javax.swing.table.DefaultTableModel;
 
 /**
  *
  * @author Jonathan
  */
-public class ManagerMain extends javax.swing.JFrame {
+public class ManagerMain extends javax.swing.JFrame implements ListSelectionListener {
 
     protected FrameManager frameManager;
     protected RecordManager recordManager;
 
     protected List<EncryptFile> userPasswordList;
+
+    protected char defaultEchoChar;
+
+    protected String encyptedPassword = "**********";
 
     /**
      * Creates new form ManagerMain
@@ -33,8 +43,51 @@ public class ManagerMain extends javax.swing.JFrame {
         initComponents();
 
         this.frameManager = frameManager;
-        this.recordManager = new RecordManager(new UserApplicationPassword());
+        this.recordManager = new RecordManager(new UserApplicationPassword(), "_" + this.frameManager.userAccount.userName);
         this.userPasswordList = this.recordManager.GetAllRecordsInFile();
+
+        this.defaultEchoChar = this.txtPassword.getEchoChar();
+
+        this.tblPasswordManager.getSelectionModel().addListSelectionListener(this);
+
+        //show all record
+        this.GetRecordAllRecord();
+    }
+
+    @Override
+    public void valueChanged(ListSelectionEvent listEvent) {
+        //int rowIndex = listEvent.getLastIndex();
+        int rowIndex = this.tblPasswordManager.getSelectedRow();
+        if (rowIndex != -1 && this.userPasswordList.size() > rowIndex) {
+            this.PutRecordToFields(this.userPasswordList.get(rowIndex));
+        } else {
+            this.PutRecordToFields(null);
+        }
+    }
+
+    protected void GetRecordAllRecord() {
+        DefaultTableModel model = (DefaultTableModel) this.tblPasswordManager.getModel();
+        this.userPasswordList = this.recordManager.GetAllRecordsInFile();
+
+        if (this.userPasswordList != null) {
+            for (int i = 0; i < this.userPasswordList.size(); i++) {
+                UserApplicationPassword record = (UserApplicationPassword) this.userPasswordList.get(i);
+                String[] tableRow = {
+                    record.applicationName,
+                    record.url,
+                    record.accountName,
+                    record.GetPasswrod().length() == 0 ? "" : this.encyptedPassword
+                };
+                model.insertRow(i, tableRow);
+            }
+
+            if (this.userPasswordList.size() > 0) {
+                this.tblPasswordManager.setRowSelectionInterval(0, 0);
+
+                //set table value
+                this.PutRecordToFields(this.userPasswordList.get(0));
+            }
+        }
     }
 
     /**
@@ -52,6 +105,18 @@ public class ManagerMain extends javax.swing.JFrame {
         lblHeader = new javax.swing.JLabel();
         btnSave = new javax.swing.JButton();
         btnSync = new javax.swing.JButton();
+        jLabel1 = new javax.swing.JLabel();
+        jLabel2 = new javax.swing.JLabel();
+        jLabel3 = new javax.swing.JLabel();
+        jLabel4 = new javax.swing.JLabel();
+        txtAccountName = new javax.swing.JTextField();
+        txtURL = new javax.swing.JTextField();
+        txtApplicationName = new javax.swing.JTextField();
+        txtPassword = new javax.swing.JPasswordField();
+        chkShowPassword = new javax.swing.JCheckBox();
+        btnAddRow = new javax.swing.JButton();
+        btnDeleteRow = new javax.swing.JButton();
+        btnUpdate = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("Password Manager");
@@ -70,10 +135,7 @@ public class ManagerMain extends javax.swing.JFrame {
 
         tblPasswordManager.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null}
+
             },
             new String [] {
                 "Application Name", "URL", "Account Name", "Password"
@@ -82,21 +144,80 @@ public class ManagerMain extends javax.swing.JFrame {
             Class[] types = new Class [] {
                 java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class
             };
+            boolean[] canEdit = new boolean [] {
+                false, false, false, false
+            };
 
             public Class getColumnClass(int columnIndex) {
                 return types [columnIndex];
             }
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
         });
+        tblPasswordManager.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        tblPasswordManager.getTableHeader().setReorderingAllowed(false);
         jScrollPane1.setViewportView(tblPasswordManager);
+        tblPasswordManager.getColumnModel().getSelectionModel().setSelectionMode(javax.swing.ListSelectionModel.SINGLE_INTERVAL_SELECTION);
 
         lblHeader.setFont(new java.awt.Font("新細明體", 1, 18)); // NOI18N
         lblHeader.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         lblHeader.setText("My Account Password");
 
         btnSave.setText("Save");
+        btnSave.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnSaveActionPerformed(evt);
+            }
+        });
 
         btnSync.setText("Sync");
         btnSync.setToolTipText("");
+
+        jLabel1.setText("Application Name");
+
+        jLabel2.setText("URL");
+
+        jLabel3.setText("Account Name");
+
+        jLabel4.setText("Password");
+
+        txtAccountName.setToolTipText("Account Name");
+
+        txtURL.setToolTipText("URL");
+
+        txtApplicationName.setToolTipText("Application Name");
+
+        txtPassword.setToolTipText("");
+
+        chkShowPassword.setText("Show Password");
+        chkShowPassword.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                chkShowPasswordActionPerformed(evt);
+            }
+        });
+
+        btnAddRow.setLabel("Add");
+        btnAddRow.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnAddRowActionPerformed(evt);
+            }
+        });
+
+        btnDeleteRow.setLabel("Delete");
+        btnDeleteRow.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnDeleteRowActionPerformed(evt);
+            }
+        });
+
+        btnUpdate.setLabel("Update");
+        btnUpdate.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnUpdateActionPerformed(evt);
+            }
+        });
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -106,40 +227,82 @@ public class ManagerMain extends javax.swing.JFrame {
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
-                        .addComponent(jScrollPane1)
-                        .addContainerGap())
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                        .addGap(0, 151, Short.MAX_VALUE)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                                .addComponent(lblHeader, javax.swing.GroupLayout.PREFERRED_SIZE, 310, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(158, 158, 158))
-                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                                .addComponent(btnSave, javax.swing.GroupLayout.PREFERRED_SIZE, 73, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(10, 10, 10)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addComponent(chkShowPassword)
+                            .addGroup(layout.createSequentialGroup()
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 102, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 102, javax.swing.GroupLayout.PREFERRED_SIZE))
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                    .addGroup(layout.createSequentialGroup()
-                                        .addComponent(btnSync, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                        .addContainerGap())
-                                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                                        .addComponent(btnLogout)
-                                        .addGap(22, 22, 22))))))))
+                                    .addComponent(txtApplicationName, javax.swing.GroupLayout.PREFERRED_SIZE, 200, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addComponent(txtURL, javax.swing.GroupLayout.PREFERRED_SIZE, 200, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                    .addComponent(jLabel4, javax.swing.GroupLayout.PREFERRED_SIZE, 92, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 92, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addGap(18, 18, 18)
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(txtPassword, javax.swing.GroupLayout.PREFERRED_SIZE, 200, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addComponent(txtAccountName, javax.swing.GroupLayout.PREFERRED_SIZE, 200, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                        .addGap(0, 20, Short.MAX_VALUE))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jScrollPane1)
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(btnLogout)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(btnSave, javax.swing.GroupLayout.PREFERRED_SIZE, 73, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(btnSync, javax.swing.GroupLayout.PREFERRED_SIZE, 79, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                                .addGap(0, 0, Short.MAX_VALUE)
+                                .addComponent(btnUpdate)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(btnAddRow)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(btnDeleteRow)))
+                        .addContainerGap())))
+            .addComponent(lblHeader, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(lblHeader, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 15, Short.MAX_VALUE)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 256, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 199, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(txtAccountName, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                        .addComponent(txtApplicationName, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(jLabel1)
+                        .addComponent(jLabel3))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(27, 27, 27)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(txtURL, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(jLabel2)
+                            .addComponent(jLabel4)
+                            .addComponent(txtPassword, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(chkShowPassword)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(btnAddRow)
+                    .addComponent(btnDeleteRow)
+                    .addComponent(btnUpdate))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 45, Short.MAX_VALUE)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(btnLogout)
                     .addComponent(btnSave)
                     .addComponent(btnSync))
-                .addGap(18, 18, 18)
-                .addComponent(btnLogout)
                 .addContainerGap())
         );
+
+        btnAddRow.getAccessibleContext().setAccessibleDescription("");
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
@@ -149,8 +312,231 @@ public class ManagerMain extends javax.swing.JFrame {
     }//GEN-LAST:event_formWindowClosed
 
     private void btnLogoutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLogoutActionPerformed
+        this.frameManager.userAccount = null;
         this.frameManager.PreviousPage();
     }//GEN-LAST:event_btnLogoutActionPerformed
+
+    private void btnSaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSaveActionPerformed
+        this.recordManager.SaveFile(this.userPasswordList);
+    }//GEN-LAST:event_btnSaveActionPerformed
+
+    private void chkShowPasswordActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chkShowPasswordActionPerformed
+        if (this.chkShowPassword.isSelected()) {
+            this.txtPassword.setEchoChar((char) 0);
+        } else {
+            this.txtPassword.setEchoChar(this.defaultEchoChar);
+        }
+
+    }//GEN-LAST:event_chkShowPasswordActionPerformed
+
+    private void btnAddRowActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAddRowActionPerformed
+
+        String[] tableRow = {
+            this.txtApplicationName.getText(),
+            this.txtURL.getText(),
+            this.txtAccountName.getText(),
+            new String(this.txtPassword.getPassword())
+        };
+
+        UserApplicationPassword userApplicationPassword = (UserApplicationPassword) this.recordManager.ConvertStringToObject(tableRow);
+        int rowIndex = this.tblPasswordManager.getSelectedRow();
+        rowIndex++;
+        //check
+        if (!this.ValidateAddRow(userApplicationPassword, rowIndex)) {
+            return;
+        }
+        //add row
+        this.AddTableRow(userApplicationPassword, tableRow, rowIndex);
+    }//GEN-LAST:event_btnAddRowActionPerformed
+
+    protected void AddTableRow(UserApplicationPassword userApplicationPassword, String[] tableRow, int rowIndex) {
+        DefaultTableModel model = (DefaultTableModel) this.tblPasswordManager.getModel();
+        String encryptPassword = "";
+        if (tableRow[3].length() > 0) {
+            encryptPassword = this.encyptedPassword;
+        }
+        tableRow[3] = encryptPassword;
+        model.insertRow(rowIndex, tableRow);
+        this.userPasswordList.add(rowIndex, userApplicationPassword);
+
+        this.SetFocusTableRow(rowIndex);
+    }
+
+    private void btnDeleteRowActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDeleteRowActionPerformed
+        int selectedIndex = this.tblPasswordManager.getSelectedRow();
+
+        if (!this.ValidateDeleteRow(selectedIndex)) {
+            return;
+        }
+
+        this.DeleteTableRow(selectedIndex);
+    }//GEN-LAST:event_btnDeleteRowActionPerformed
+
+    private void btnUpdateActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnUpdateActionPerformed
+
+        int rowIndex = this.tblPasswordManager.getSelectedRow();
+
+        UserApplicationPassword record = new UserApplicationPassword();
+        record.applicationName = this.txtApplicationName.getText();
+        record.url = this.txtURL.getText();
+        record.accountName = this.txtAccountName.getText();
+        record.SetPassword(new String(this.txtPassword.getPassword()));
+
+        //validate
+        if (!this.ValidateUpdateRecord(record, rowIndex)) {
+            return;
+        }
+
+        this.UpdatePasswordRecord(record, rowIndex);
+    }//GEN-LAST:event_btnUpdateActionPerformed
+
+    protected boolean ValidateUpdateRecord(UserApplicationPassword userApplicationPassword, int rowIndex) {
+        if (userApplicationPassword.applicationName == "") {
+            JOptionPane.showMessageDialog(this, "Please enter Application Name", "Invalid Add Record", 0);
+            return false;
+        }
+
+        /*
+        if(userApplicationPassword.url == "")
+        {
+            JOptionPane.showMessageDialog(this, "Please enter Application URL", "Invalid Add Record", 0);
+            return false;
+        }
+         */
+        if (userApplicationPassword.accountName == "") {
+            JOptionPane.showMessageDialog(this, "Please enter Account Name", "Invalid Update Record", 0);
+            return false;
+        }
+
+        if (userApplicationPassword.GetPasswrod() == "") {
+            JOptionPane.showMessageDialog(this, "Please enter Account Password", "Invalid Update Record", 0);
+            return false;
+        }
+
+        if (rowIndex == -1
+                || this.tblPasswordManager.getRowCount() <= rowIndex) {
+            JOptionPane.showMessageDialog(this, "Invalid row index", "Invalid Update Record", 0);
+            return false;
+        }
+
+        if (this.CheckDuplicate(userApplicationPassword, rowIndex, false)) {
+            JOptionPane.showMessageDialog(this, "Record duplicate", "Invalid Update Record", 0);
+            return false;
+        }
+
+        return true;
+
+    }
+
+    protected void UpdatePasswordRecord(UserApplicationPassword record, int rowIndex) {
+        DefaultTableModel model = (DefaultTableModel) this.tblPasswordManager.getModel();
+
+        this.userPasswordList.set(rowIndex, record);
+
+        model.setValueAt(record.applicationName, rowIndex, 0);
+        model.setValueAt(record.url, rowIndex, 1);
+        model.setValueAt(record.accountName, rowIndex, 2);
+        model.setValueAt(record.GetPasswrod().length() == 0 ? "" : this.encyptedPassword, rowIndex, 3);
+    }
+
+    protected boolean ValidateDeleteRow(int rowIndex) {
+        if (rowIndex == -1) {
+            return false;
+        }
+
+        if (this.userPasswordList.size() < rowIndex) {
+            return false;
+        }
+        return true;
+    }
+
+    protected boolean ValidateAddRow(UserApplicationPassword userApplicationPassword, int rowIndex) {
+
+        if (userApplicationPassword.applicationName.equals("")) {
+            JOptionPane.showMessageDialog(this, "Please enter Application Name", "Invalid Add Record", 0);
+            return false;
+        }
+
+        /*
+        if(userApplicationPassword.url.equals(""))
+        {
+            JOptionPane.showMessageDialog(this, "Please enter Application URL", "Invalid Add Record", 0);
+            return false;
+        }
+         */
+        if (userApplicationPassword.accountName.equals("")) {
+            JOptionPane.showMessageDialog(this, "Please enter Account Name", "Invalid Add Record", 0);
+            return false;
+        }
+
+        if (userApplicationPassword.GetPasswrod().length() == 0) {
+            JOptionPane.showMessageDialog(this, "Please enter Account Password", "Invalid Add Record", 0);
+            return false;
+        }
+
+        if (this.CheckDuplicate(userApplicationPassword, rowIndex, true)) {
+            JOptionPane.showMessageDialog(this, "Record duplicate", "Invalid Add Record", 0);
+            return false;
+        }
+        return true;
+    }
+
+    protected boolean CheckDuplicate(UserApplicationPassword userApplicationPassword, int rowIndex, boolean isNewRecord) {
+        this.recordManager.mainFileRecord = userApplicationPassword;
+
+        for (int i = 0; i < this.userPasswordList.size(); i++) {
+            //if update record -> no need to check self indexF
+            if (rowIndex == i && !isNewRecord) {
+                continue;
+            }
+
+            UserApplicationPassword curRecord = (UserApplicationPassword) this.userPasswordList.get(i);
+            if (this.recordManager.CheckRecordEqualsKey(curRecord)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    protected void DeleteTableRow(int rowIndex) {
+        DefaultTableModel model = (DefaultTableModel) this.tblPasswordManager.getModel();
+        this.userPasswordList.remove(rowIndex);
+        model.removeRow(rowIndex);
+
+        this.SetFocusTableRow(rowIndex);
+    }
+
+    protected void SetFocusTableRow(int rowIndex) {
+        EncryptFile focusTableRecord = null;
+        //check table enough row -> select index
+        if (this.userPasswordList.size() > rowIndex) {
+            this.tblPasswordManager.setRowSelectionInterval(rowIndex, rowIndex);
+            //set table value
+
+            focusTableRecord = this.userPasswordList.get(rowIndex);
+        }
+
+        this.PutRecordToFields(focusTableRecord);
+    }
+
+    protected void PutRecordToFields(EncryptFile focusTableRecord) {
+        UserApplicationPassword userPasswordRecord;
+        userPasswordRecord = (UserApplicationPassword) focusTableRecord;
+        if (userPasswordRecord != null) {
+            this.txtAccountName.setText(userPasswordRecord.accountName);
+            this.txtApplicationName.setText(userPasswordRecord.applicationName);
+            this.txtURL.setText(userPasswordRecord.url);
+            this.txtPassword.setText(userPasswordRecord.GetPasswrod());
+
+            this.txtPassword.setEchoChar(this.defaultEchoChar);
+            this.chkShowPassword.setSelected(false);
+        } else {
+            this.txtAccountName.setText("");
+            this.txtApplicationName.setText("");
+            this.txtURL.setText("");
+            this.txtPassword.setText("");
+        }
+    }
 
     /**
      * @param args the command line arguments
@@ -188,11 +574,23 @@ public class ManagerMain extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton btnAddRow;
+    private javax.swing.JButton btnDeleteRow;
     private javax.swing.JButton btnLogout;
     private javax.swing.JButton btnSave;
     private javax.swing.JButton btnSync;
+    private javax.swing.JButton btnUpdate;
+    private javax.swing.JCheckBox chkShowPassword;
+    private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel2;
+    private javax.swing.JLabel jLabel3;
+    private javax.swing.JLabel jLabel4;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JLabel lblHeader;
     private javax.swing.JTable tblPasswordManager;
+    private javax.swing.JTextField txtAccountName;
+    private javax.swing.JTextField txtApplicationName;
+    private javax.swing.JPasswordField txtPassword;
+    private javax.swing.JTextField txtURL;
     // End of variables declaration//GEN-END:variables
 }
