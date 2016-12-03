@@ -270,6 +270,14 @@ public class RecordManager {
     }
 
     public String DecryptValue(String value, EncryptType encryptType) {
+        if (encryptType == EncryptType.NonReversible) {
+            try {
+                value = EncryptMethod.HashEncode(encryptKey, value);
+            } catch (Exception e) {
+                System.out.println("Encrypt message error " + e.getMessage());
+            }
+            return value;
+        }
         return value;
     }
 }
