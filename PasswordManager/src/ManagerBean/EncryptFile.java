@@ -14,7 +14,6 @@ import java.util.Map;
 public interface EncryptFile {
 
     enum EncryptType {
-        None,
         Reversible,
         NonReversible
     }

@@ -31,6 +31,7 @@ public class RecordManager {
     public EncryptFile mainFileRecord;
     public String fileSuffix;
     protected File file;
+    private String encryptKey;
 
     public RecordManager(EncryptFile encryptFile) {
         this.mainFileRecord = encryptFile;
@@ -89,17 +90,17 @@ public class RecordManager {
         return this.mainFileRecord.IsRecordKeyEquals(curRecordArray);
     }
 
-    public boolean SaveFile(EncryptFile encryptFile) {
+    public boolean SaveFile(EncryptFile encryptFile, boolean isAppend) {
         List<EncryptFile> list = new ArrayList<EncryptFile>();
         list.add(encryptFile);
 
-        return this.SaveFile(list);
+        return this.SaveFile(list, isAppend);
     }
 
-    public boolean SaveFile(List<EncryptFile> encryptFileList) {
+    public boolean SaveFile(List<EncryptFile> encryptFileList, boolean isAppend) {
         try {
             //cover original records
-            BufferedWriter writer = new BufferedWriter(new FileWriter(this.file, false));
+            BufferedWriter writer = new BufferedWriter(new FileWriter(this.file, isAppend));
             PrintWriter out = new PrintWriter(writer);
             for (int i = 0; i < encryptFileList.size(); i++) {
                 out.println(this.ConvertObjectToString(encryptFileList.get(i)));
@@ -251,9 +252,19 @@ public class RecordManager {
         return ";";
     }
 
+    public void SetEncryptKey(String encryptKey) {
+        this.encryptKey = encryptKey;
+    }
+
     public String EncryptValue(String value, EncryptType encryptType) {
-        if (encryptType == EncryptType.None) {
+        if (encryptType == EncryptType.NonReversible) {
+            try {
+                value = EncryptMethod.HashEncode(encryptKey, value);
+            } catch (Exception e) {
+                System.out.println("Encrypt message error " + e.getMessage());
+            }
             return value;
+
         }
         return value;
     }

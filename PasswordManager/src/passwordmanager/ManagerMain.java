@@ -317,7 +317,8 @@ public class ManagerMain extends javax.swing.JFrame implements ListSelectionList
     }//GEN-LAST:event_btnLogoutActionPerformed
 
     private void btnSaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSaveActionPerformed
-        this.recordManager.SaveFile(this.userPasswordList);
+        //override all record
+        this.recordManager.SaveFile(this.userPasswordList, false);
     }//GEN-LAST:event_btnSaveActionPerformed
 
     private void chkShowPasswordActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chkShowPasswordActionPerformed
