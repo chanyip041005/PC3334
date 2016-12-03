@@ -204,7 +204,7 @@ public class ManagerLogin extends javax.swing.JFrame {
         this.recordManager.ConvertToDecryptedObject(this.userAccount);
         //check record in file and current login acount password valid
         if (!this.userAccount.GetPassword().equals(this.userAccountActualRecord.GetPassword())
-                || !userInputOneTimePassword.equals(oneTimePassword)) {
+                || userInputOneTimePassword == null || !userInputOneTimePassword.equals(oneTimePassword)) {
             JOptionPane.showMessageDialog(this, "Account password invalid or One time password Invalid.", "Invalid Login", 0);
             validLogin = false;
         }
