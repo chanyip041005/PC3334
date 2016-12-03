@@ -28,12 +28,26 @@ import java.util.Set;
  */
 public class RecordManager {
 
-    public EncryptFile objectStruct;
+    public EncryptFile mainFileRecord;
+    public String fileSuffix;
     protected File file;
 
     public RecordManager(EncryptFile encryptFile) {
-        this.objectStruct = encryptFile;
-        this.file = new File(encryptFile.GetFilePath());
+        this.mainFileRecord = encryptFile;
+        this.fileSuffix = "";
+
+        this.Initialize();
+    }
+
+    public RecordManager(EncryptFile encryptFile, String fileSuffix) {
+        this.mainFileRecord = encryptFile;
+        this.fileSuffix = fileSuffix;
+
+        this.Initialize();
+    }
+
+    public void Initialize() {
+        this.file = new File(this.mainFileRecord.GetFilePath() + this.fileSuffix);
 
         String path = file.getParent();
         File directory = new File(path);
@@ -45,12 +59,12 @@ public class RecordManager {
     }
 
     public boolean CheckRecordEquals(EncryptFile curRecord) {
-        Field[] fields = this.objectStruct.getClass().getDeclaredFields();
+        Field[] fields = this.mainFileRecord.getClass().getDeclaredFields();
         for (int i = 0; i < fields.length; i++) {
             try {
                 fields[i].setAccessible(true);
                 //check all value is equals
-                if (!fields[i].get(this.objectStruct).equals(fields[i].get(curRecord))) {
+                if (!fields[i].get(this.mainFileRecord).equals(fields[i].get(curRecord))) {
                     return false;
                 }
             } catch (Exception e) {
@@ -59,6 +73,20 @@ public class RecordManager {
             }
         }
         return true;
+    }
+
+    public boolean CheckRecordEqualsKey(EncryptFile curRecord) {
+        Field[] fields = this.mainFileRecord.getClass().getDeclaredFields();
+        Object[] curRecordArray = new Object[fields.length];
+        for (int i = 0; i < fields.length; i++) {
+            fields[i].setAccessible(true);
+            try {
+                curRecordArray[i] = fields[i].get(curRecord);
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
+            }
+        }
+        return this.mainFileRecord.IsRecordKeyEquals(curRecordArray);
     }
 
     public boolean SaveFile(EncryptFile encryptFile) {
@@ -70,7 +98,8 @@ public class RecordManager {
 
     public boolean SaveFile(List<EncryptFile> encryptFileList) {
         try {
-            BufferedWriter writer = new BufferedWriter(new FileWriter(this.file, true));
+            //cover original records
+            BufferedWriter writer = new BufferedWriter(new FileWriter(this.file, false));
             PrintWriter out = new PrintWriter(writer);
             for (int i = 0; i < encryptFileList.size(); i++) {
                 out.println(this.ConvertObjectToString(encryptFileList.get(i)));
@@ -84,29 +113,6 @@ public class RecordManager {
         return true;
     }
 
-    //criteria -> pass in record
-    public boolean CheckRecordKeyExists(EncryptFile encryptFile) {
-        if (this.file.exists()) {
-            BufferedReader br;
-            try {
-                br = new BufferedReader(new FileReader(this.file));
-                String line = "";
-                while ((line = br.readLine()) != null) {
-                    String[] record = line.split(this.GetFileSeparater());
-                    //check record exists
-                    if (encryptFile.IsRecordKeyExists(record)) {
-                        return true;
-                    }
-                }
-                br.close();
-
-            } catch (Exception e) {
-                System.out.println(e.getMessage());
-            }
-        }
-        return false;
-    }
-
     //get record in file storage
     //critera -> same as curret record key
     public EncryptFile GetRecordInFile(EncryptFile encryptFile) {
@@ -118,7 +124,7 @@ public class RecordManager {
             while ((line = br.readLine()) != null) {
                 String[] record = line.split(this.GetFileSeparater());
                 //check record exists
-                if (encryptFile.IsRecordKeyExists(record)) {
+                if (encryptFile.IsRecordKeyEquals(record)) {
                     curFile = this.ConvertStringToObject(line);
                 }
             }
@@ -176,20 +182,17 @@ public class RecordManager {
     }
 
     //out object
-    public EncryptFile ConvertStringToObject(String record) {
+    public EncryptFile ConvertStringToObject(String[] recordArray) {
         EncryptFile curFile = null;
         try {
             //clone object
-            curFile = (EncryptFile) this.objectStruct.CloneObject();
+            curFile = (EncryptFile) this.mainFileRecord.CloneObject();
         } catch (Exception e) {
             System.out.println(e.getMessage());
             return null;
         }
-
-        String[] recordArray = record.split(this.GetFileSeparater());
-        Field[] fields = this.objectStruct.getClass().getDeclaredFields();
-        String curValue;
-        for (int i = 0; i < recordArray.length; i++) {
+        Field[] fields = this.mainFileRecord.getClass().getDeclaredFields();
+        for (int i = 0; i < fields.length; i++) {
             try {
                 fields[i].setAccessible(true);
                 fields[i].set(curFile, recordArray[i]);
@@ -199,6 +202,11 @@ public class RecordManager {
         }
 
         return curFile;
+    }
+
+    public EncryptFile ConvertStringToObject(String record) {
+        String[] recordArray = record.split(this.GetFileSeparater());
+        return this.ConvertStringToObject(recordArray);
     }
 
     //reocrd to encrypted message

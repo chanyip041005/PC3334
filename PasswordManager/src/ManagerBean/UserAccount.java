@@ -16,10 +16,12 @@ public class UserAccount implements EncryptFile, Cloneable {
 
     public String userName;
     private String password;
+    public String gmailAccount;
 
-    public UserAccount(String userName, String password) {
+    public UserAccount(String userName, String password, String gmailAccount) {
         this.userName = userName;
         this.password = password;
+        this.gmailAccount = gmailAccount;
     }
 
     public String GetPassword() {
@@ -41,18 +43,17 @@ public class UserAccount implements EncryptFile, Cloneable {
         return "data/UserAccount";
     }
 
-    public boolean IsRecordKeyExists(String[] curRecord) {
+    public boolean IsRecordKeyEquals(Object[] curRecord) {
         if (curRecord[0].equals(this.userName)) {
             return true;
         }
         return false;
     }
 
-    public Object CloneObject()throws CloneNotSupportedException
-    {
+    public Object CloneObject() throws CloneNotSupportedException {
         return this.clone();
     }
-    
+
     protected Object clone() throws CloneNotSupportedException {
         return super.clone();
     }
