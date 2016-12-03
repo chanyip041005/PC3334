@@ -169,8 +169,11 @@ public class ManagerRegister extends javax.swing.JFrame {
             return;
         }
 
+        //valid
+        //set encrypt key
+        this.recordManager.SetEncryptKey(this.userAccount.GetEncryptKey());
         this.recordManager.ConvertToEncryptedObject(this.userAccount);
-        if (this.recordManager.SaveFile(this.userAccount)) {
+        if (this.recordManager.SaveFile(this.userAccount, true)) {
             JOptionPane.showMessageDialog(this, "Account Register Successful.", "Register Successful", 1);
             this.frameManager.PreviousPage();
         } else {

@@ -167,7 +167,7 @@ public class ManagerLogin extends javax.swing.JFrame {
     protected boolean CheckLoginPasswordFromEmail() {
         String password = JOptionPane.showInputDialog("Please enter one time password sent to your email.");
 
-        if (password.equals("1234")) {
+        if (password != null && password.equals("1234")) {
             return true;
         }
 
@@ -211,7 +211,8 @@ public class ManagerLogin extends javax.swing.JFrame {
 
         if (validLogin) {
             //hash object
-            this.recordManager.ConvertToDecryptedObject(this.userAccount);
+            this.recordManager.SetEncryptKey(this.userAccount.GetEncryptKey());
+            this.recordManager.ConvertToEncryptedObject(this.userAccount);
             //check record in file and current login acount password valid
             if (!this.userAccount.GetPassword().equals(tempUserAccount.GetPassword())) {
                 JOptionPane.showMessageDialog(this, "Invalid password.", "Invalid Login", 0);

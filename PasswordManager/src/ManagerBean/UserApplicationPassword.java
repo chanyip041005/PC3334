@@ -29,8 +29,7 @@ public class UserApplicationPassword implements EncryptFile, Cloneable {
 
     public Map<String, EncryptType> GetFieldsEncryptTypeList() {
         HashMap<String, EncryptType> fieldsEncryptType = new HashMap<String, EncryptType>();
-        //fieldsEncryptType.put("userName", EncryptType.None);
-        fieldsEncryptType.put("password", EncryptType.NonReversible);
+        fieldsEncryptType.put("password", EncryptType.Reversible);
         return fieldsEncryptType;
     }
 

@@ -57,4 +57,8 @@ public class UserAccount implements EncryptFile, Cloneable {
     protected Object clone() throws CloneNotSupportedException {
         return super.clone();
     }
+
+    public String GetEncryptKey() {
+        return "PasswordManager" + this.userName;
+    }
 }
