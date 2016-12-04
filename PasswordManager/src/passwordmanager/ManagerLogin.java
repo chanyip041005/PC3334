@@ -23,6 +23,9 @@ public class ManagerLogin extends javax.swing.JFrame {
     protected RecordManager recordManager;
 
     protected UserAccount userAccount;
+    protected UserAccount userAccountActualRecord;
+
+    protected EmailManager emailManager;
 
     //each account
     protected Map<String, Integer> invalidAccountCount;
@@ -35,6 +38,8 @@ public class ManagerLogin extends javax.swing.JFrame {
 
         this.frameManager = new FrameManager(this);
         this.invalidAccountCount = new HashMap<String, Integer>();
+
+        this.emailManager = new EmailManager();
     }
 
     /**
@@ -153,26 +158,68 @@ public class ManagerLogin extends javax.swing.JFrame {
             return;
         }
 
-        //user name and password valid
-        //check one time password
-        if (!this.CheckLoginPasswordFromEmail()) {
+        //check password
+        if (!this.CheckLoginPassword()) {
             return;
         }
 
+        //change page
         this.frameManager.userAccount = this.userAccount;
         ManagerMain mainPage = new ManagerMain(this.frameManager);
         this.frameManager.NextPage(mainPage);
     }//GEN-LAST:event_btnLoginActionPerformed
 
-    protected boolean CheckLoginPasswordFromEmail() {
-        String password = JOptionPane.showInputDialog("Please enter one time password sent to your email.");
+    protected String GenerateOneTimePassword(int noOfDigit) {
+        String password = "";
+        for (int i = 0; i < noOfDigit; i++) {
+            password += (int) (Math.random() * 10);
+        }
+        return password;
+    }
 
-        if (password != null && password.equals("1234")) {
-            return true;
+    protected boolean CheckLoginPassword() {
+
+        boolean validLogin = true;
+
+        //if error count >=3, cannot login account
+        if (this.invalidAccountCount.containsKey(this.userAccount.userName)) {
+            if (this.invalidAccountCount.get(this.userAccount.userName) >= 3) {
+                JOptionPane.showMessageDialog(this, "Too much attempt to login.", "Invalid Login", 0);
+                return false;
+            }
         }
 
-        JOptionPane.showMessageDialog(this, "Invalid one time password.", "Invalid Login", 0);
-        return false;
+        //valid user name, getted userAccountActualRecord
+        //send email
+        String oneTimePassword = this.GenerateOneTimePassword(8);
+        String title = "Password Manager Login";
+        String message = "You requested to login into Password Manager and the one time password show as below.";
+        message += "\r\n\r\nPassword: " + oneTimePassword;
+        this.emailManager.SendEmail(this.userAccount.gmailAccount, title, message);
+
+        String userInputOneTimePassword = JOptionPane.showInputDialog("Please enter one time password sent to your email.");
+
+        //hash object
+        this.recordManager.SetEncryptKey(this.userAccount.GetEncryptKey());
+        this.recordManager.ConvertToDecryptedObject(this.userAccount);
+        //check record in file and current login acount password valid
+        if (!this.userAccount.GetPassword().equals(this.userAccountActualRecord.GetPassword())
+                || userInputOneTimePassword == null || !userInputOneTimePassword.equals(oneTimePassword)) {
+            JOptionPane.showMessageDialog(this, "Account password invalid or One time password Invalid.", "Invalid Login", 0);
+            validLogin = false;
+        }
+
+        //count error login
+        if (!validLogin) {
+            int count = 1;
+            if (!this.invalidAccountCount.containsKey(this.userAccount.userName)) {
+                this.invalidAccountCount.put(this.userAccount.userName, count);
+            } else {
+                count = this.invalidAccountCount.get(this.userAccount.userName);
+                this.invalidAccountCount.replace(this.userAccount.userName, ++count);
+            }
+        }
+        return validLogin;
     }
 
     protected boolean CheckLoginAccountValid() {
@@ -190,51 +237,19 @@ public class ManagerLogin extends javax.swing.JFrame {
 
         String userName = this.txtUserName.getText();
         String password = new String(this.txtPassword.getPassword());
-        if (this.invalidAccountCount.containsKey(userName)) {
-            if (this.invalidAccountCount.get(userName) >= 3) {
-                JOptionPane.showMessageDialog(this, "Too much attempt to login", "Invalid Login", 0);
-                return false;
-            }
-        }
 
-        boolean validLogin = true;
         this.userAccount = new UserAccount(userName, password, "");
         this.recordManager = new RecordManager(this.userAccount);
         //check record exists and return Account object
-        UserAccount tempUserAccount = (UserAccount) this.recordManager.GetRecordInFile(this.userAccount);
-        if (tempUserAccount == null) {
+        this.userAccountActualRecord = (UserAccount) this.recordManager.GetRecordInFile(this.userAccount);
+        if (userAccountActualRecord == null) {
             //record not exisis
             JOptionPane.showMessageDialog(this, "Account does not exists.", "Invalid Login", 0);
             this.txtUserName.requestFocus();
-            validLogin = false;
-        }
-
-        if (validLogin) {
-            //hash object
-            this.recordManager.SetEncryptKey(this.userAccount.GetEncryptKey());
-            this.recordManager.ConvertToEncryptedObject(this.userAccount);
-            //check record in file and current login acount password valid
-            if (!this.userAccount.GetPassword().equals(tempUserAccount.GetPassword())) {
-                JOptionPane.showMessageDialog(this, "Invalid password.", "Invalid Login", 0);
-                validLogin = false;
-            }
-        }
-
-        //count error login
-        if (!validLogin) {
-            int count = 1;
-            if (!this.invalidAccountCount.containsKey(userName)) {
-                this.invalidAccountCount.put(userName, count);
-            } else {
-                count = this.invalidAccountCount.get(userName);
-                this.invalidAccountCount.replace(userName, ++count);
-            }
-
-            return false;
         }
 
         //set back gmail
-        this.userAccount.gmailAccount = tempUserAccount.gmailAccount;
+        this.userAccount.gmailAccount = this.userAccountActualRecord.gmailAccount;
         return true;
     }
 
