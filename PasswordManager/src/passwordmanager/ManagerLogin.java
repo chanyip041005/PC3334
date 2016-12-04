@@ -240,6 +240,9 @@ public class ManagerLogin extends javax.swing.JFrame {
 
         this.userAccount = new UserAccount(userName, password, "");
         this.recordManager = new RecordManager(this.userAccount);
+        recordManager.setUsername(userName);
+        recordManager.setPassword(password);
+        recordManager.setSecretUtils();
         //check record exists and return Account object
         this.userAccountActualRecord = (UserAccount) this.recordManager.GetRecordInFile(this.userAccount);
         if (userAccountActualRecord == null) {
