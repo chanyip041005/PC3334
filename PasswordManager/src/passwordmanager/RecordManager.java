@@ -197,6 +197,28 @@ public class RecordManager {
         return allRecords;
     }
 
+    public List<String> GetAllRecordsStringInFile() {
+        List<String> allRecords = new ArrayList<String>();
+
+        EncryptFile curFile = null;
+        BufferedReader br;
+        try {
+            br = new BufferedReader(new FileReader(this.file));
+            String line = "";
+            while ((line = br.readLine()) != null) {
+                byte[] myMsgArr = secretUtils.decryptMode(Base64.getDecoder().decode(line.getBytes()));  
+                String tempString = new String(myMsgArr).toString();
+                allRecords.add(tempString);
+            }
+            br.close();
+
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+
+        return allRecords;
+    }
+
     //out string for export
     public String ConvertObjectToString(EncryptFile encryptFile) {
         //convert file to string

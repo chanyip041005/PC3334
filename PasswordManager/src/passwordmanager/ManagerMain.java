@@ -5,9 +5,14 @@
  */
 package passwordmanager;
 
+import GoogleDrive.GoogleDriveSync;
 import ManagerBean.EncryptFile;
 import ManagerBean.UserApplicationPassword;
+import com.google.api.client.util.DateTime;
+import com.google.api.services.drive.model.File;
 import java.awt.Point;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Stack;
@@ -32,6 +37,9 @@ public class ManagerMain extends javax.swing.JFrame implements ListSelectionList
 
     protected String encyptedPassword = "**********";
 
+    protected GoogleDriveSync googleDriveSync;
+    protected String fileID;
+
     /**
      * Creates new form ManagerMain
      */
@@ -47,14 +55,17 @@ public class ManagerMain extends javax.swing.JFrame implements ListSelectionList
         this.recordManager.setUsername(this.frameManager.userAccount.userName);
         this.recordManager.setPassword(this.frameManager.userAccount.GetPassword());
         this.recordManager.setSecretUtils();
-        this.userPasswordList = this.recordManager.GetAllRecordsInFile();   
+        //this.userPasswordList = this.recordManager.GetAllRecordsInFile();   
 
         this.defaultEchoChar = this.txtPassword.getEchoChar();
 
         this.tblPasswordManager.getSelectionModel().addListSelectionListener(this);
+        this.fileID = "";
 
         //show all record
         this.GetRecordAllRecord();
+
+        this.googleDriveSync = new GoogleDriveSync(this.recordManager.file.getPath());
     }
 
     @Override
@@ -70,9 +81,24 @@ public class ManagerMain extends javax.swing.JFrame implements ListSelectionList
 
     protected void GetRecordAllRecord() {
         DefaultTableModel model = (DefaultTableModel) this.tblPasswordManager.getModel();
-        this.userPasswordList = this.recordManager.GetAllRecordsInFile();
+        model.setRowCount(0);
+        //this.userPasswordList = this.recordManager.GetAllRecordsInFile();
 
-        if (this.userPasswordList != null) {
+        List<String> allRecordInFile = this.recordManager.GetAllRecordsStringInFile();
+        this.userPasswordList = new ArrayList<EncryptFile>();
+        for (int i = 0; i < allRecordInFile.size(); i++) {
+            EncryptFile encryptFile = this.recordManager.ConvertStringToObject(allRecordInFile.get(i));
+            if (((UserApplicationPassword) encryptFile).accountName == null
+                    || ((UserApplicationPassword) encryptFile).accountName.equals("null")) {
+                //account name is key field, if null -> google file ID
+                fileID = ((UserApplicationPassword) encryptFile).applicationName;
+            } else {
+                this.userPasswordList.add(encryptFile);
+            }
+        }
+
+
+        //if (this.userPasswordList != null) {
             for (int i = 0; i < this.userPasswordList.size(); i++) {
                 UserApplicationPassword record = (UserApplicationPassword) this.userPasswordList.get(i);
                 String[] tableRow = {
@@ -90,7 +116,7 @@ public class ManagerMain extends javax.swing.JFrame implements ListSelectionList
                 //set table value
                 this.PutRecordToFields(this.userPasswordList.get(0));
             }
-        }
+        //}
     }
 
     /**
@@ -177,6 +203,11 @@ public class ManagerMain extends javax.swing.JFrame implements ListSelectionList
 
         btnSync.setText("Sync");
         btnSync.setToolTipText("");
+        btnSync.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnSyncActionPerformed(evt);
+            }
+        });
 
         jLabel1.setText("Application Name");
 
@@ -321,7 +352,17 @@ public class ManagerMain extends javax.swing.JFrame implements ListSelectionList
 
     private void btnSaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSaveActionPerformed
         //override all record
+        if (!this.fileID.equals("")) {
+            UserApplicationPassword googleFileID = new UserApplicationPassword();
+            googleFileID.applicationName = this.fileID;
+            this.userPasswordList.add(googleFileID);
+        }
         this.recordManager.SaveFile(this.userPasswordList, false);
+
+        //remove google ID
+        if (!this.fileID.equals("")) {
+            this.userPasswordList.remove(this.userPasswordList.size() - 1);
+        }
     }//GEN-LAST:event_btnSaveActionPerformed
 
     private void chkShowPasswordActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chkShowPasswordActionPerformed
@@ -393,6 +434,36 @@ public class ManagerMain extends javax.swing.JFrame implements ListSelectionList
 
         this.UpdatePasswordRecord(record, rowIndex);
     }//GEN-LAST:event_btnUpdateActionPerformed
+
+    private void btnSyncActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSyncActionPerformed
+        //
+        //this.btnSaveActionPerformed(evt);
+        if (this.fileID == null || this.fileID.equals("")) {
+            //sync to drive
+            File file = this.googleDriveSync.InsertFile();
+            this.fileID = file.getId();
+            //UserApplicationPassword googleFile = new UserApplicationPassword();
+            //googleFile.applicationName = this.fileID;
+            //this.userPasswordList.add(googleFile);
+            //save record again
+            this.btnSaveActionPerformed(evt);
+            this.googleDriveSync.UpdateFile(this.fileID);
+        } else {
+            File file = this.googleDriveSync.GetUploadedFile(this.fileID);
+            DateTime googleFileModifyTempDate = file.getModifiedDate();
+            Date googleFileModifyDate = new Date(googleFileModifyTempDate.getValue());
+            Date localFileModifyDate = new Date(this.recordManager.file.lastModified());
+
+            if (googleFileModifyDate.compareTo(localFileModifyDate) < 0) {
+                //sync to google drive
+                this.googleDriveSync.UpdateFile(this.fileID);
+            } else if (googleFileModifyDate.compareTo(localFileModifyDate) > 0) {
+                //replace file
+                this.googleDriveSync.DownloadFile(this.fileID);
+                this.GetRecordAllRecord();
+            }
+        }
+    }//GEN-LAST:event_btnSyncActionPerformed
 
     protected boolean ValidateUpdateRecord(UserApplicationPassword userApplicationPassword, int rowIndex) {
         if (userApplicationPassword.applicationName == "") {
