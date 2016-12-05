@@ -43,8 +43,11 @@ public class ManagerMain extends javax.swing.JFrame implements ListSelectionList
         initComponents();
 
         this.frameManager = frameManager;
-        this.recordManager = new RecordManager(new UserApplicationPassword(), "_" + this.frameManager.userAccount.userName);
-        this.userPasswordList = this.recordManager.GetAllRecordsInFile();
+        this.recordManager = new RecordManager(new UserApplicationPassword(), this.frameManager.userAccount.userName, this.frameManager.userAccount.GetPassword());
+        this.recordManager.setUsername(this.frameManager.userAccount.userName);
+        this.recordManager.setPassword(this.frameManager.userAccount.GetPassword());
+        this.recordManager.setSecretUtils();
+        this.userPasswordList = this.recordManager.GetAllRecordsInFile();   
 
         this.defaultEchoChar = this.txtPassword.getEchoChar();
 

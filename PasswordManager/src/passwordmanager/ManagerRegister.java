@@ -224,11 +224,13 @@ public class ManagerRegister extends javax.swing.JFrame {
 
         this.userAccount = new UserAccount(this.txtUserName.getText(), new String(this.txtPassword.getPassword()), this.txtGmail.getText());
         this.recordManager = new RecordManager(userAccount);
-
-        if (this.recordManager.GetRecordInFile(this.userAccount) != null) {
-            JOptionPane.showMessageDialog(this, "User Name Exists.", "Invalid Register", 0);
-            return false;
-        }
+        this.recordManager.setUsername(userAccount.userName);
+        this.recordManager.setPassword(userAccount.GetPassword());
+        this.recordManager.setSecretUtils();
+//        if (this.recordManager.GetRecordInFile(this.userAccount) != null) {
+//            JOptionPane.showMessageDialog(this, "User Name Exists.", "Invalid Register", 0);
+//            return false;
+//        }
         return true;
     }
 

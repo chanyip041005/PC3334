@@ -7,6 +7,7 @@ package passwordmanager;
 
 import ManagerBean.EncryptFile;
 import ManagerBean.EncryptFile.EncryptType;
+import ManagerBean.SecretUtils;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -14,6 +15,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -21,6 +23,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Base64;
 
 /**
  *
@@ -32,6 +35,10 @@ public class RecordManager {
     public String fileSuffix;
     protected File file;
     private String encryptKey;
+    private SecretUtils secretUtils;
+    
+    private String username;
+    private String password;
 
     public RecordManager(EncryptFile encryptFile) {
         this.mainFileRecord = encryptFile;
@@ -40,13 +47,30 @@ public class RecordManager {
         this.Initialize();
     }
 
-    public RecordManager(EncryptFile encryptFile, String fileSuffix) {
+    public RecordManager(EncryptFile encryptFile, String username, String password) {
         this.mainFileRecord = encryptFile;
-        this.fileSuffix = fileSuffix;
-
+        setUsername(username);
+        setPassword(password);
+        setSecretUtils();
+        byte[] secretArr = secretUtils.encryptMode(username.getBytes());  
+        String tempEncrypt =  Base64.getEncoder().encodeToString(secretArr); //base64 toString format
+        this.fileSuffix = "_" + tempEncrypt;
+        System.out.println(this.fileSuffix);
         this.Initialize();
     }
-
+    
+    public void setUsername(String username){
+        this.username = username;
+    }
+    
+    public void setPassword(String password){
+        this.password = password;
+    }
+    public void setSecretUtils(){
+        secretUtils = new SecretUtils(this.username, this.password);
+    }
+    
+    
     public void Initialize() {
         this.file = new File(this.mainFileRecord.GetFilePath() + this.fileSuffix);
 
@@ -100,10 +124,13 @@ public class RecordManager {
     public boolean SaveFile(List<EncryptFile> encryptFileList, boolean isAppend) {
         try {
             //cover original records
+            
             BufferedWriter writer = new BufferedWriter(new FileWriter(this.file, isAppend));
             PrintWriter out = new PrintWriter(writer);
             for (int i = 0; i < encryptFileList.size(); i++) {
-                out.println(this.ConvertObjectToString(encryptFileList.get(i)));
+                byte[] secretArr = secretUtils.encryptMode((this.ConvertObjectToString(encryptFileList.get(i))).getBytes());    
+                String tempEncrypt =  Base64.getEncoder().encodeToString(secretArr); //base64 toString format
+                out.println(tempEncrypt);
             }
             out.close();
 
@@ -123,11 +150,19 @@ public class RecordManager {
             br = new BufferedReader(new FileReader(this.file));
             String line = "";
             while ((line = br.readLine()) != null) {
-                String[] record = line.split(this.GetFileSeparater());
-                //check record exists
-                if (encryptFile.IsRecordKeyEquals(record)) {
-                    curFile = this.ConvertStringToObject(line);
+                try {
+                    byte[] myMsgArr = secretUtils.decryptMode(Base64.getDecoder().decode(line.getBytes(StandardCharsets.UTF_8)));  
+                    String tempString = new String(myMsgArr);
+                    String[] record = tempString.split(this.GetFileSeparater());
+                    //check record exists
+                    if (record.length == 3 && encryptFile.IsRecordKeyEquals(record)) {
+                        curFile = this.ConvertStringToObject(tempString);
+                    }
                 }
+                catch (Exception ex) {
+                    System.out.println("something wrong");
+                }
+                
             }
             br.close();
 
@@ -139,15 +174,18 @@ public class RecordManager {
     }
 
     public List<EncryptFile> GetAllRecordsInFile() {
+        
         List<EncryptFile> allRecords = new ArrayList<EncryptFile>();
-
+        
         EncryptFile curFile = null;
         BufferedReader br;
         try {
             br = new BufferedReader(new FileReader(this.file));
             String line = "";
             while ((line = br.readLine()) != null) {
-                curFile = this.ConvertStringToObject(line);
+                byte[] myMsgArr = secretUtils.decryptMode(Base64.getDecoder().decode(line.getBytes()));  
+                String tempString = new String(myMsgArr).toString();
+                curFile = this.ConvertStringToObject(tempString);
                 allRecords.add(curFile);
             }
             br.close();
@@ -207,7 +245,11 @@ public class RecordManager {
 
     public EncryptFile ConvertStringToObject(String record) {
         String[] recordArray = record.split(this.GetFileSeparater());
-        return this.ConvertStringToObject(recordArray);
+        if(recordArray.length > 1){
+            return this.ConvertStringToObject(recordArray);
+        }else{
+            return null;
+        }
     }
 
     //reocrd to encrypted message
